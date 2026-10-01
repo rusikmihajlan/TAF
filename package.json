@@ -1,0 +1,13 @@
+{
+  "name": "restful-booker-tests",
+  "version": "1.0.0",
+  "description": "API automation tests for Restful Booker",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test tests/booking.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
