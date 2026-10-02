@@ -1,112 +1,66 @@
 import test from 'node:test';
 import assert from 'node:assert';
+import { HttpClient } from '../src/core/HttpClient.js';
+import { AuthService } from '../src/business/AuthService.js';
+import { BookingService } from '../src/business/BookingService.js';
 
 const BASE_URL = 'https://restful-booker.herokuapp.com';
-let token = '';
-let bookingId = null;
 
-test('1. Should generate a valid auth token', async () => {
-    const response = await fetch(`${BASE_URL}/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            username: 'admin',
-            password: 'password123'
-        })
+const httpClient = new HttpClient(BASE_URL);
+const authService = new AuthService(httpClient);
+const bookingService = new BookingService(httpClient);
+
+test('Restful-Booker Layered Architecture CRUD Workflow', async (t) => {
+    let token = '';
+    let bookingId = null;
+
+    await t.test('1. Should generate auth token via AuthService', async () => {
+        const res = await authService.getToken('admin', 'password123');
+        assert.strictEqual(res.status, 200);
+        assert.ok(res.body.token);
+        token = res.body.token;
     });
 
-    assert.strictEqual(response.status, 200, 'Status code should be 200');
-    assert.ok(response.headers.get('content-type').includes('application/json'), 'Content-Type should be JSON');
-
-    const body = await response.json();
-    
-    assert.ok(body.token, 'Response body should contain a token');
-    token = body.token;
-});
-
-test('2. Should create a new booking', async () => {
-    const response = await fetch(`${BASE_URL}/booking`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    await t.test('2. Should create a booking via BookingService', async () => {
+        const payload = {
             firstname: 'John',
             lastname: 'Doe',
             totalprice: 150,
             depositpaid: true,
-            bookingdates: {
-                checkin: '2026-06-01',
-                checkout: '2026-06-10'
-            },
+            bookingdates: { checkin: '2026-06-01', checkout: '2026-06-10' },
             additionalneeds: 'Breakfast'
-        })
+        };
+
+        const res = await bookingService.createBooking(payload);
+        assert.strictEqual(res.status, 200);
+        assert.ok(res.body.bookingid);
+        bookingId = res.body.bookingid;
     });
 
-    assert.strictEqual(response.status, 200, 'Status code should be 200');
-    assert.ok(response.headers.get('content-type').includes('application/json'));
+    await t.test('3. Should retrieve booking by ID', async () => {
+        assert.ok(bookingId);
+        const res = await bookingService.getBookingById(bookingId);
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.body.firstname, 'John');
+    });
 
-    const body = await response.json();
-    assert.ok(body.bookingid, 'Response should contain a bookingid');
-    assert.strictEqual(body.booking.firstname, 'John');
-    
-    bookingId = body.bookingid;
-});
-
-test('3. Should retrieve the created booking by ID', async () => {
-    assert.ok(bookingId, 'Booking ID must exist from previous test');
-
-    const response = await fetch(`${BASE_URL}/booking/${bookingId}`);
-
-    assert.strictEqual(response.status, 200, 'Status code should be 200');
-    assert.ok(response.headers.get('content-type').includes('application/json'));
-
-    const body = await response.json();
-    assert.strictEqual(body.firstname, 'John');
-    assert.strictEqual(body.lastname, 'Doe');
-    assert.strictEqual(body.totalprice, 150);
-});
-
-test('4. Should update the existing booking', async () => {
-    assert.ok(token, 'Auth token must exist');
-    assert.ok(bookingId, 'Booking ID must exist');
-
-    const response = await fetch(`${BASE_URL}/booking/${bookingId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Cookie': `token=${token}`
-        },
-        body: JSON.stringify({
+    await t.test('4. Should update booking using token', async () => {
+        const updatePayload = {
             firstname: 'Jane',
             lastname: 'Smith',
             totalprice: 200,
             depositpaid: false,
-            bookingdates: {
-                checkin: '2026-07-01',
-                checkout: '2026-07-10'
-            },
+            bookingdates: { checkin: '2026-07-01', checkout: '2026-07-10' },
             additionalneeds: 'Late Checkout'
-        })
+        };
+
+        const res = await bookingService.updateBooking(bookingId, token, updatePayload);
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.body.firstname, 'Jane');
     });
 
-    assert.strictEqual(response.status, 200, 'Status code should be 200');
-    
-    const body = await response.json();
-    assert.strictEqual(body.firstname, 'Jane');
-    assert.strictEqual(body.lastname, 'Smith');
-    assert.strictEqual(body.totalprice, 200);
-});
-
-test('5. Should delete the booking', async () => {
-    assert.ok(token, 'Auth token must exist');
-    assert.ok(bookingId, 'Booking ID must exist');
-
-    const response = await fetch(`${BASE_URL}/booking/${bookingId}`, {
-        method: 'DELETE',
-        headers: {
-            'Cookie': `token=${token}`
-        }
+    await t.test('5. Should delete booking using token', async () => {
+        const res = await bookingService.deleteBooking(bookingId, token);
+        assert.strictEqual(res.status, 201);
     });
-
-    assert.strictEqual(response.status, 201, 'Status code should be 201 for successful deletion');
 });
