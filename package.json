@@ -1,13 +1,26 @@
 {
-  "name": "restful-booker-tests",
+  "name": "module-07-test-automation-framework",
   "version": "1.0.0",
-  "description": "API automation tests for Restful Booker",
+  "private": true,
+  "description": "Layered WebdriverIO Page Object framework for Practice Software Testing",
   "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "test": "node --test tests/booking.test.js"
+  "engines": {
+    "node": ">=22.0.0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "scripts": {
+    "test": "wdio run ./tests/config/wdio.conf.js",
+    "test:reverse": "TEST_ORDER=reverse npm test",
+    "check": "eslint ."
+  },
+  "devDependencies": {
+    "@wdio/cli": "9.32.0",
+    "@wdio/local-runner": "9.32.0",
+    "@wdio/mocha-framework": "9.32.0",
+    "@wdio/spec-reporter": "9.32.0",
+    "@wdio/globals": "9.31.3",
+    "chai": "6.3.0",
+    "eslint": "9.39.1",
+    "@eslint/js": "9.39.1",
+    "globals": "16.5.0"
+  }
 }
